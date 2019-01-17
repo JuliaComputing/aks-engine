@@ -56,6 +56,7 @@ installGPUDrivers() {
 installContainerRuntime() {
     if [[ "$CONTAINER_RUNTIME" == "docker" ]]; then
         if [[ "$DOCKER_ENGINE_REPO" != "" ]]; then
+            ephemeralDocker
             installDockerEngine
         else
             installMoby
@@ -80,6 +81,21 @@ installMoby() {
         apt_get_update || exit $ERR_APT_UPDATE_TIMEOUT
         apt_get_install 20 30 120 moby-engine=3.0.1 moby-cli=3.0.1 || exit $ERR_MOBY_INSTALL_TIMEOUT
     fi
+}
+
+function ephemeralDocker() {
+    # Use ephemeral storage for docker storage
+    set -x
+    grep -w "\/var\/lib\/docker" /etc/fstab
+    if [ $? -eq 0 ]
+    then
+        echo "docker volume is already mounted"
+        exit 0
+    fi
+    mkdir -p /var/lib/docker
+    sed -i "s_/mnt_/var/lib/docker_" /etc/fstab
+    mount -a
+    touch /var/run/reboot-required
 }
 
 installDockerEngine() {
